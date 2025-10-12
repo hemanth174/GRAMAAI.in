@@ -469,7 +469,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                   ))
-                }
+                )}
               </CardContent>
             </Card>
           </section>
@@ -477,7 +477,10 @@ export default function Dashboard() {
       </div>
 
       {/* Modals and Notifications */}
-      <AppointmentFormDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
+      <AppointmentFormDialog
+        isOpen={showAddDialog}
+        onClose={() => setShowAddDialog(false)}
+      />
 
       <NotificationToast
         notification={notification}
