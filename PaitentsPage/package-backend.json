@@ -1,0 +1,17 @@
+{
+  "name": "patients-portal-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Backend server for Patient Portal",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "sqlite3": "^5.1.6",
+    "sqlite": "^5.0.1"
+  }
+}
