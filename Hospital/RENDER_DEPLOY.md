@@ -17,7 +17,7 @@ Name: gramaai-hospital-backend
 Region: Oregon (US West)
 Branch: main
 Runtime: Node
-Build Command: cd Hospital && npm install
+Build Command: cd Hospital && npm ci && npm rebuild
 Start Command: cd Hospital && node server.js
 ```
 

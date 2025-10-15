@@ -1,0 +1,19 @@
+# Render.com deployment configuration for GRAMAAI Hospital Backend
+services:
+  - type: web
+    name: gramaai-hospital-backend
+    runtime: node
+    env: node
+    plan: free
+    region: oregon
+    buildCommand: cd Hospital && npm ci && npm rebuild
+    startCommand: cd Hospital && node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: "https://gramaai.netlify.app,https://gramaai-hospital.netlify.app,https://gramaai-patients.netlify.app"

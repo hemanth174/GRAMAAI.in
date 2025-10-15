@@ -1,0 +1,25 @@
+# Exclude node_modules so they get rebuilt on deployment
+Hospital/node_modules/
+PaitentsPage/node_modules/
+LandingPage1/node_modules/
+node_modules/
+
+# Exclude build artifacts
+Hospital/dist/
+PaitentsPage/out/
+LandingPage1/out/
+out/
+dist/
+
+# Exclude local SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Exclude logs
+*.log
+npm-debug.log*
+
+# Exclude OS files
+.DS_Store
+Thumbs.db

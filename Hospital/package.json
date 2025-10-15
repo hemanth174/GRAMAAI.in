@@ -11,7 +11,9 @@
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "start": "node server.js",
     "server": "node server.js",
-    "backend": "node server.js"
+    "backend": "node server.js",
+    "postinstall": "npm rebuild sqlite3",
+    "rebuild": "npm rebuild sqlite3"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.1",

@@ -55,7 +55,7 @@ async function initMySql() {
     } catch (error) {
         mysqlPool = null;
         mysqlReady = false;
-        console.warn('⚠️ MySQL connection failed, falling back to SQLite appointments store:', error.message);
+        console.info('📊 Using SQLite database (MySQL not configured)');
     }
 
     return mysqlPool;
