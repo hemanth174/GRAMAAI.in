@@ -138,23 +138,23 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button
               onClick={() => {
-                window.location.href = 'http://localhost:5173';
+                window.open('https://gramaai-patient.netlify.app', '_blank');
               }}
               className="w-full sm:w-auto px-8 py-4 text-lg bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap cursor-pointer"
               size="lg"
             >
               <i className="ri-user-line mr-3 text-xl"></i>
-              Patient Login
+              Patient Portal
             </Button>
             <Button
               onClick={() => {
-                window.location.href = 'http://localhost:3000/login';
+                window.open('https://gramaai-hospital.netlify.app/login', '_blank');
               }}
               className="w-full sm:w-auto px-8 py-4 text-lg bg-green-600 hover:bg-green-700 text-white whitespace-nowrap cursor-pointer"
               size="lg"
             >
               <i className="ri-stethoscope-line mr-3 text-xl"></i>
-              Doctor Login
+              Hospital Portal
             </Button>
           </div>
         </div>
@@ -281,23 +281,23 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button
               onClick={() => {
-                window.location.href = 'http://localhost:5173';
+                window.open('https://gramaai-patient.netlify.app', '_blank');
               }}
               className="w-full sm:w-auto px-8 py-4 text-lg bg-white text-blue-600 hover:bg-gray-100 whitespace-nowrap cursor-pointer"
               size="lg"
             >
               <i className="ri-user-line mr-3 text-xl"></i>
-              Login to Platform
+              Patient Portal
             </Button>
             <Button
               onClick={() => {
-                window.location.href = 'http://localhost:3000/login';
+                window.open('https://gramaai-hospital.netlify.app/login', '_blank');
               }}
               className="w-full sm:w-auto px-8 py-4 text-lg bg-white text-green-600 hover:bg-gray-100 whitespace-nowrap cursor-pointer"
               size="lg"
             >
-              <i className="ri-user-add-line mr-3 text-xl"></i>
-              Register Now
+              <i className="ri-stethoscope-line mr-3 text-xl"></i>
+              Hospital Portal
             </Button>
           </div>
         </div>
