@@ -12,6 +12,12 @@
   to = "/index.html"
   status = 200
 
+# SPA routing - redirect all requests to index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
 # API redirects to backend (when deployed)
 [[redirects]]
   from = "/api/*"
