@@ -30,7 +30,21 @@ const timeFormatter = new Intl.DateTimeFormat('en-IN', { hour: 'numeric', minute
 
 const toDateObject = (value) => {
   if (!value) return null;
-  const date = new Date(value);
+  
+  // Handle malformed time strings like "2025-10-18T11:00AM:00"
+  let cleanValue = value;
+  if (typeof value === 'string') {
+    // Remove AM/PM from middle of ISO strings and fix common formatting issues
+    cleanValue = value
+      .replace(/T(\d{1,2}):(\d{2})(AM|PM):(\d{2})/, (match, hour, min, ampm, sec) => {
+        let hour24 = parseInt(hour);
+        if (ampm === 'PM' && hour24 !== 12) hour24 += 12;
+        if (ampm === 'AM' && hour24 === 12) hour24 = 0;
+        return `T${hour24.toString().padStart(2, '0')}:${min}:${sec}`;
+      });
+  }
+  
+  const date = new Date(cleanValue);
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
