@@ -2,11 +2,9 @@
 # This builds the Landing Page by default
 
 [build]
-  command = "cd LandingPage1 && npm install && npm run build"
-  publish = "LandingPage1/out"
-  
-[build.environment]
-  NODE_VERSION = "18"
+  base = "LandingPage1"
+  command = "npm install && npm run build"
+  publish = "out"
 
 # SPA routing - redirect all requests to index.html
 [[redirects]]
