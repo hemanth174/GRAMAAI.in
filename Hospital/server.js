@@ -19,10 +19,20 @@ import { generateDecisionMessage } from './hospitalMessages.js';
 import { randomUUID } from 'crypto';
 
 const app = express();
-const port = 5000;
+const port = process.env.PORT || 5000;
 
 // --- Middleware ---
-app.use(cors());
+// Configure CORS for production
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN 
+    ? process.env.CORS_ORIGIN.split(',')
+    : ['http://localhost:3000', 'http://localhost:3002', 'http://localhost:3003'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
+
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(express.static('.'));
 
