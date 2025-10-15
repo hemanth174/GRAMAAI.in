@@ -1,9 +1,10 @@
 
-import { RouteObject } from 'react-router-dom';
+import type { RouteObject } from 'react-router-dom';
 import HomePage from '../pages/home/page';
 import LandingPage from '../pages/landing/page';
-import PatientLoginPage from '../pages/login/patient/page';
-import DoctorLoginPage from '../pages/login/doctor/page';
+import DoctorDashboard from '../pages/doctor/dashboard/page';
+import AppointmentDetailsPage from '../pages/doctor/appointment-details/page';
+import PatientLoginPage from '../pages/patient-login/page';
 import PatientDashboardPage from '../pages/patient-dashboard/page';
 import DoctorDashboardPage from '../pages/doctor-dashboard/page';
 import DoctorsPage from '../pages/doctors/page';
@@ -19,19 +20,23 @@ const routes: RouteObject[] = [
     element: <LandingPage />
   },
   {
-    path: '/login/patient',
+    path: '/patient-login',
     element: <PatientLoginPage />
   },
   {
-    path: '/login/doctor',
-    element: <DoctorLoginPage />
+    path: '/doctor-dashboard',
+    element: <DoctorDashboard />
+  },
+  {
+    path: '/appointment-details/:appointmentId',
+    element: <AppointmentDetailsPage />
   },
   {
     path: '/patient-dashboard',
     element: <PatientDashboardPage />
   },
   {
-    path: '/doctor-dashboard',
+    path: '/doctor-dashboard-old',
     element: <DoctorDashboardPage />
   },
   {

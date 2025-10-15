@@ -3,8 +3,63 @@ import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 import bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
+import mysql from 'mysql2/promise';
 
 let db = null;
+let mysqlPool = null;
+let mysqlReady = false;
+
+const MYSQL_DEFAULT_CONFIG = {
+    host: process.env.MYSQL_HOST || 'localhost',
+    port: Number(process.env.MYSQL_PORT || 3306),
+    user: process.env.MYSQL_USER || 'root',
+    password: process.env.MYSQL_PASSWORD || '',
+    database: process.env.MYSQL_DATABASE || 'hospital_portal',
+};
+
+async function initMySql() {
+    if (mysqlReady && mysqlPool) {
+        return mysqlPool;
+    }
+
+    try {
+        mysqlPool = mysql.createPool({
+            ...MYSQL_DEFAULT_CONFIG,
+            waitForConnections: true,
+            connectionLimit: Number(process.env.MYSQL_CONNECTION_LIMIT || 10),
+        });
+
+        await mysqlPool.query(`
+            CREATE TABLE IF NOT EXISTS appointments (
+                id VARCHAR(64) PRIMARY KEY,
+                patient_name VARCHAR(255) NOT NULL,
+                patient_email VARCHAR(255),
+                patient_phone VARCHAR(64),
+                symptoms TEXT,
+                requested_doctor_id VARCHAR(64),
+                requested_doctor_name VARCHAR(255),
+                appointment_date DATE,
+                appointment_time VARCHAR(64),
+                appointment_time_slot VARCHAR(32),
+                priority VARCHAR(32) DEFAULT 'medium',
+                status VARCHAR(32) DEFAULT 'pending',
+                document_urls JSON NULL,
+                uploaded_documents JSON NULL,
+                created_date DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL
+            )
+        `);
+
+        mysqlReady = true;
+        console.log('✅ MySQL appointments table ready');
+    } catch (error) {
+        mysqlPool = null;
+        mysqlReady = false;
+        console.warn('⚠️ MySQL connection failed, falling back to SQLite appointments store:', error.message);
+    }
+
+    return mysqlPool;
+}
 
 // Initialize database connection
 export async function initDatabase() {
@@ -67,10 +122,13 @@ export async function initDatabase() {
                 id TEXT PRIMARY KEY,
                 patient_name TEXT NOT NULL,
                 patient_email TEXT,
+                patient_phone TEXT,
                 symptoms TEXT,
                 requested_doctor_id TEXT,
                 requested_doctor_name TEXT,
+                appointment_date TEXT,
                 appointment_time TEXT,
+                appointment_time_slot TEXT,
                 priority TEXT DEFAULT 'medium',
                 status TEXT DEFAULT 'pending',
                 document_urls TEXT DEFAULT '[]',
@@ -95,8 +153,12 @@ export async function initDatabase() {
         await ensureAppointmentColumn('uploaded_documents', "TEXT DEFAULT '[]'");
         await ensureAppointmentColumn('created_date', 'TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP');
         await ensureAppointmentColumn('updated_at', 'TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP');
+    await ensureAppointmentColumn('patient_phone', 'TEXT');
+    await ensureAppointmentColumn('appointment_date', 'TEXT');
+    await ensureAppointmentColumn('appointment_time_slot', 'TEXT');
 
         console.log('✅ Database tables created successfully');
+        await initMySql();
         return db;
     } catch (error) {
         console.error('❌ Database initialization error:', error);
@@ -281,10 +343,13 @@ export async function verifyOTP(email, otp) {
 const APPOINTMENT_FIELDS = [
     'patient_name',
     'patient_email',
+    'patient_phone',
     'symptoms',
     'requested_doctor_id',
     'requested_doctor_name',
+    'appointment_date',
     'appointment_time',
+    'appointment_time_slot',
     'priority',
     'status',
     'document_urls',
@@ -298,36 +363,213 @@ function normalizeAppointmentRow(row) {
         return null;
     }
 
-    const safeParseArray = (value) => {
+    const toArray = (value) => {
         if (!value) return [];
-        try {
-            const parsed = JSON.parse(value);
-            return Array.isArray(parsed) ? parsed : [];
-        } catch (error) {
-            console.warn('⚠️ Failed to parse appointment array column, returning empty array:', error);
-            return [];
+        if (Array.isArray(value)) return value;
+        if (Buffer.isBuffer(value)) {
+            const asString = value.toString('utf8');
+            try {
+                const parsed = JSON.parse(asString);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+                console.warn('⚠️ Failed to parse appointment array buffer, returning empty array:', error);
+                return [];
+            }
         }
+        if (typeof value === 'string') {
+            try {
+                const parsed = JSON.parse(value);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+                console.warn('⚠️ Failed to parse appointment array column, returning empty array:', error);
+                return [];
+            }
+        }
+        return [];
     };
+
+    const toDateOnly = (value) => {
+        if (!value) return null;
+        if (value instanceof Date) {
+            return value.toISOString().slice(0, 10);
+        }
+        if (typeof value === 'string') {
+            const date = new Date(value);
+            if (!Number.isNaN(date.getTime())) {
+                return date.toISOString().slice(0, 10);
+            }
+        }
+        return `${value}`;
+    };
+
+    const toIsoDateTime = (value) => {
+        if (!value) return null;
+        if (value instanceof Date) {
+            return value.toISOString();
+        }
+        if (typeof value === 'string') {
+            const date = new Date(value);
+            if (!Number.isNaN(date.getTime())) {
+                return date.toISOString();
+            }
+        }
+        return `${value}`;
+    };
+
+    const appointmentDate = row.appointment_date || row.date || null;
+    const appointmentTimeSlot = row.appointment_time_slot || row.time || null;
+    const appointmentIso = toIsoDateTime(row.appointment_time || (appointmentDate && appointmentTimeSlot ? `${appointmentDate} ${appointmentTimeSlot}` : null));
+
+    const created = toIsoDateTime(row.created_date || row.created_at || new Date());
+    const updated = toIsoDateTime(row.updated_at || created);
 
     return {
         id: row.id,
         patient_name: row.patient_name,
-        patient_email: row.patient_email,
+        patientName: row.patient_name,
+        patient_email: row.patient_email || row.email || null,
+        email: row.patient_email || row.email || null,
+        patient_phone: row.patient_phone || row.phone || null,
+        phone: row.patient_phone || row.phone || null,
         symptoms: row.symptoms,
         requested_doctor_id: row.requested_doctor_id,
-        requested_doctor_name: row.requested_doctor_name,
-        requested_doctor: row.requested_doctor_name,
-        appointment_time: row.appointment_time,
-        priority: row.priority,
-        status: row.status,
-        document_urls: safeParseArray(row.document_urls),
-        uploaded_documents: safeParseArray(row.uploaded_documents),
-        created_date: row.created_date,
-        updated_at: row.updated_at
+        requested_doctor_name: row.requested_doctor_name || row.doctor_name,
+        requested_doctor: row.requested_doctor_name || row.doctor_name,
+        doctor_name: row.requested_doctor_name || row.doctor_name,
+        appointment_date: appointmentDate ? toDateOnly(appointmentDate) : null,
+        appointment_time: appointmentIso,
+        appointment_time_slot: appointmentTimeSlot,
+        date: appointmentDate ? toDateOnly(appointmentDate) : null,
+        time: appointmentTimeSlot,
+        priority: row.priority || 'medium',
+        status: row.status || 'pending',
+        document_urls: toArray(row.document_urls),
+        uploaded_documents: toArray(row.uploaded_documents),
+        created_date: created,
+        updated_at: updated
     };
 }
 
+function resolveAppointmentInput(input, defaultTimestamp) {
+    const toArray = (value) => {
+        if (!value) return [];
+        if (Array.isArray(value)) return value;
+        if (typeof value === 'string') {
+            try {
+                const parsed = JSON.parse(value);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+                return [];
+            }
+        }
+        return [];
+    };
+
+    const patientName = input.patient_name || input.patientName;
+    const email = input.patient_email || input.email;
+    const phone = input.patient_phone || input.phone;
+    const symptoms = input.symptoms || input.symptoms_text || '';
+    const requestedDoctorId = input.requested_doctor_id || input.requestedDoctorId || null;
+    const requestedDoctorName = input.requested_doctor_name || input.requested_doctor || input.doctorName || null;
+
+    const explicitDate = input.appointment_date || input.date || null;
+    const explicitTime = input.appointment_time_slot || input.time || null;
+
+    const computeIso = () => {
+        if (input.appointment_time) {
+            const parsed = new Date(input.appointment_time);
+            return Number.isNaN(parsed.getTime()) ? `${input.appointment_time}` : parsed.toISOString();
+        }
+        if (explicitDate && explicitTime) {
+            const parsed = new Date(`${explicitDate} ${explicitTime}`);
+            return Number.isNaN(parsed.getTime()) ? `${explicitDate} ${explicitTime}` : parsed.toISOString();
+        }
+        if (explicitDate) {
+            const parsed = new Date(explicitDate);
+            return Number.isNaN(parsed.getTime()) ? `${explicitDate}` : parsed.toISOString();
+        }
+        return null;
+    };
+
+    const appointmentIso = computeIso();
+    const deriveDate = () => {
+        if (explicitDate) return explicitDate;
+        if (!appointmentIso) return null;
+        const parsed = new Date(appointmentIso);
+        return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
+    };
+
+    const deriveTimeSlot = () => {
+        if (explicitTime) return explicitTime;
+        if (!appointmentIso) return null;
+        const parsed = new Date(appointmentIso);
+        if (Number.isNaN(parsed.getTime())) return null;
+        return parsed.toISOString().slice(11, 16);
+    };
+
+    const created = input.created_date || defaultTimestamp;
+    const priority = input.priority || input.priority_level || 'medium';
+    const status = input.status || input.status_text || 'pending';
+
+    return {
+        id: input.id,
+        patient_name: patientName,
+        patient_email: email,
+        patient_phone: phone,
+        symptoms,
+        requested_doctor_id: requestedDoctorId,
+        requested_doctor_name: requestedDoctorName,
+        appointment_date: deriveDate(),
+        appointment_time_slot: deriveTimeSlot(),
+        appointment_time: appointmentIso,
+        priority,
+        status,
+        document_urls: toArray(input.document_urls || input.documents || []),
+        uploaded_documents: toArray(input.uploaded_documents || input.documents || []),
+        created_date: created,
+        updated_at: defaultTimestamp,
+    };
+}
+
+function buildAppointmentUpdate(updates, timestamp) {
+    const resolved = resolveAppointmentInput({ ...updates }, timestamp);
+    const columns = {};
+
+    const assignIfProvided = (keys, column, value) => {
+        if (keys.some((key) => Object.prototype.hasOwnProperty.call(updates, key))) {
+            columns[column] = value;
+        }
+    };
+
+    assignIfProvided(['patient_name', 'patientName'], 'patient_name', resolved.patient_name);
+    assignIfProvided(['patient_email', 'email'], 'patient_email', resolved.patient_email);
+    assignIfProvided(['patient_phone', 'phone'], 'patient_phone', resolved.patient_phone);
+    assignIfProvided(['symptoms', 'symptoms_text'], 'symptoms', resolved.symptoms);
+    assignIfProvided(['requested_doctor_id', 'requestedDoctorId'], 'requested_doctor_id', resolved.requested_doctor_id);
+    assignIfProvided(['requested_doctor_name', 'requested_doctor', 'doctorName'], 'requested_doctor_name', resolved.requested_doctor_name);
+    assignIfProvided(['appointment_date', 'date'], 'appointment_date', resolved.appointment_date);
+    assignIfProvided(['appointment_time_slot', 'time'], 'appointment_time_slot', resolved.appointment_time_slot);
+    assignIfProvided(['appointment_time'], 'appointment_time', resolved.appointment_time);
+    assignIfProvided(['priority', 'priority_level'], 'priority', resolved.priority);
+    assignIfProvided(['status', 'status_text'], 'status', resolved.status);
+    assignIfProvided(['document_urls', 'documents'], 'document_urls', resolved.document_urls);
+    assignIfProvided(['uploaded_documents'], 'uploaded_documents', resolved.uploaded_documents);
+
+    columns.updated_at = timestamp;
+    return columns;
+}
+
 export async function listAppointments({ sort } = {}) {
+    if (mysqlReady && mysqlPool) {
+        const orderBy = sort === '-created_date' ? 'created_date DESC' : 'created_date ASC';
+        const [rows] = await mysqlPool.query(`
+            SELECT ${['id', ...APPOINTMENT_FIELDS].join(', ')}
+            FROM appointments
+            ORDER BY ${orderBy}
+        `);
+        return rows.map((row) => normalizeAppointmentRow(row));
+    }
+
     const database = await getDatabase();
     const orderBy = sort === '-created_date' ? 'created_date DESC' : 'created_date ASC';
 
@@ -341,6 +583,16 @@ export async function listAppointments({ sort } = {}) {
 }
 
 export async function getAppointmentById(id) {
+    if (mysqlReady && mysqlPool) {
+        const [rows] = await mysqlPool.query(`
+            SELECT ${['id', ...APPOINTMENT_FIELDS].join(', ')}
+            FROM appointments
+            WHERE id = ?
+            LIMIT 1
+        `, [id]);
+        return normalizeAppointmentRow(rows[0]);
+    }
+
     const database = await getDatabase();
     const row = await database.get(`
         SELECT ${['id', ...APPOINTMENT_FIELDS].join(', ')}
@@ -352,10 +604,58 @@ export async function getAppointmentById(id) {
 }
 
 export async function createAppointmentRecord(data) {
-    const database = await getDatabase();
-    const now = new Date().toISOString();
+    const now = new Date();
+    const nowIso = now.toISOString();
     const id = data.id || `apt-${randomUUID()}`;
 
+    const resolved = resolveAppointmentInput({ ...data, id }, nowIso);
+
+    if (mysqlReady && mysqlPool) {
+        const documentsJson = JSON.stringify(resolved.document_urls || []);
+        const uploadedJson = JSON.stringify(resolved.uploaded_documents || []);
+
+        await mysqlPool.execute(`
+            INSERT INTO appointments (
+                id,
+                patient_name,
+                patient_email,
+                patient_phone,
+                symptoms,
+                requested_doctor_id,
+                requested_doctor_name,
+                appointment_date,
+                appointment_time,
+                appointment_time_slot,
+                priority,
+                status,
+                document_urls,
+                uploaded_documents,
+                created_date,
+                updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS JSON), CAST(? AS JSON), ?, ?)
+        `, [
+            resolved.id,
+            resolved.patient_name,
+            resolved.patient_email,
+            resolved.patient_phone,
+            resolved.symptoms,
+            resolved.requested_doctor_id,
+            resolved.requested_doctor_name,
+            resolved.appointment_date,
+            resolved.appointment_time,
+            resolved.appointment_time_slot,
+            resolved.priority,
+            resolved.status,
+            documentsJson,
+            uploadedJson,
+            resolved.created_date,
+            resolved.updated_at
+        ]);
+
+        return await getAppointmentById(resolved.id);
+    }
+
+    const database = await getDatabase();
     const toJSON = (value) => JSON.stringify(Array.isArray(value) ? value : []);
 
     await database.run(`
@@ -363,86 +663,89 @@ export async function createAppointmentRecord(data) {
             id,
             patient_name,
             patient_email,
+            patient_phone,
             symptoms,
             requested_doctor_id,
             requested_doctor_name,
+            appointment_date,
             appointment_time,
+            appointment_time_slot,
             priority,
             status,
             document_urls,
             uploaded_documents,
             created_date,
             updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-        id,
-        data.patient_name,
-        data.patient_email,
-        data.symptoms,
-        data.requested_doctor_id,
-        data.requested_doctor_name || data.requested_doctor,
-        data.appointment_time,
-        data.priority || 'medium',
-        data.status || 'pending',
-        toJSON(data.document_urls || data.documents),
-        toJSON(data.uploaded_documents || data.documents),
-        data.created_date || now,
-        now
+        resolved.id,
+        resolved.patient_name,
+        resolved.patient_email,
+        resolved.patient_phone,
+        resolved.symptoms,
+        resolved.requested_doctor_id,
+        resolved.requested_doctor_name,
+        resolved.appointment_date,
+        resolved.appointment_time,
+        resolved.appointment_time_slot,
+        resolved.priority,
+        resolved.status,
+        toJSON(resolved.document_urls),
+        toJSON(resolved.uploaded_documents),
+        resolved.created_date,
+        resolved.updated_at
     ]);
 
-    return await getAppointmentById(id);
+    return await getAppointmentById(resolved.id);
 }
 
 export async function updateAppointmentRecord(id, updates) {
-    const database = await getDatabase();
     const now = new Date().toISOString();
+    const columnUpdates = buildAppointmentUpdate(updates, now);
 
-    const fieldMap = {
-        patient_name: 'patient_name',
-        patient_email: 'patient_email',
-        symptoms: 'symptoms',
-        requested_doctor_id: 'requested_doctor_id',
-        requested_doctor_name: 'requested_doctor_name',
-        requested_doctor: 'requested_doctor_name',
-        appointment_time: 'appointment_time',
-        priority: 'priority',
-        status: 'status',
-        document_urls: 'document_urls',
-        uploaded_documents: 'uploaded_documents',
-        created_date: 'created_date'
-    };
-
-    const setClauses = [];
-    const values = [];
-
-    const toJSON = (value) => JSON.stringify(Array.isArray(value) ? value : []);
-
-    Object.entries(updates || {}).forEach(([key, value]) => {
-        if (value === undefined || value === null) {
-            return;
-        }
-
-        const column = fieldMap[key];
-        if (!column) {
-            return;
-        }
-
-        if (column === 'document_urls' || column === 'uploaded_documents') {
-            setClauses.push(`${column} = ?`);
-            values.push(toJSON(value));
-            return;
-        }
-
-        setClauses.push(`${column} = ?`);
-        values.push(value);
-    });
-
-    if (setClauses.length === 0) {
+    if (Object.keys(columnUpdates).length <= 1) {
         return await getAppointmentById(id);
     }
 
-    setClauses.push('updated_at = ?');
-    values.push(now);
+    if (mysqlReady && mysqlPool) {
+        const setFragments = [];
+        const values = [];
+
+        for (const [column, value] of Object.entries(columnUpdates)) {
+            if (column === 'document_urls' || column === 'uploaded_documents') {
+                setFragments.push(`${column} = CAST(? AS JSON)`);
+                values.push(JSON.stringify(value));
+            } else {
+                setFragments.push(`${column} = ?`);
+                values.push(value);
+            }
+        }
+
+        values.push(id);
+
+        await mysqlPool.execute(`
+            UPDATE appointments
+            SET ${setFragments.join(', ')}
+            WHERE id = ?
+        `, values);
+
+        return await getAppointmentById(id);
+    }
+
+    const database = await getDatabase();
+    const setClauses = [];
+    const values = [];
+
+    Object.entries(columnUpdates).forEach(([column, value]) => {
+        if (column === 'document_urls' || column === 'uploaded_documents') {
+            setClauses.push(`${column} = ?`);
+            values.push(JSON.stringify(value));
+        } else {
+            setClauses.push(`${column} = ?`);
+            values.push(value);
+        }
+    });
+
     values.push(id);
 
     await database.run(`
@@ -455,6 +758,11 @@ export async function updateAppointmentRecord(id, updates) {
 }
 
 export async function deleteAppointmentRecord(id) {
+    if (mysqlReady && mysqlPool) {
+        const [result] = await mysqlPool.execute('DELETE FROM appointments WHERE id = ?', [id]);
+        return result.affectedRows > 0;
+    }
+
     const database = await getDatabase();
     const result = await database.run('DELETE FROM appointments WHERE id = ?', [id]);
     return result.changes > 0;

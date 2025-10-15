@@ -1,182 +1,130 @@
 // API client for appointment management
-// Connects patient portal to the patient portal backend
+// Connects patient portal to the main hospital backend (MySQL persistence layer)
 
-const API_BASE_URL = 'http://localhost:5001';
+import axios, { type AxiosInstance } from 'axios';
+
+const API_BASE_URL = import.meta.env?.VITE_PATIENT_API_URL ?? 'http://localhost:5001';
 
 export interface AppointmentData {
-  patient_name: string;
-  patient_email?: string;
+  patientName: string;
+  email: string;
+  phone: string;
   symptoms: string;
-  requested_doctor_id?: string;
-  requested_doctor_name: string;
-  appointment_time: string;
+  doctorName: string;
+  date: string;
+  time: string;
+  status?: 'pending' | 'accepted' | 'rejected';
   priority?: string;
-  status?: string;
-  document_urls?: string[];
-  uploaded_documents?: string[];
+  requestedDoctorId?: string;
 }
 
-export interface Appointment extends AppointmentData {
+export interface AppointmentRecord {
   id: string;
+  patient_name: string;
+  patient_email: string | null;
+  patient_phone: string | null;
+  symptoms: string | null;
+  requested_doctor_id?: string | null;
+  requested_doctor_name: string | null;
+  appointment_date: string | null;
+  appointment_time: string | null;
+  appointment_time_slot: string | null;
+  priority: string | null;
+  status: 'pending' | 'accepted' | 'rejected';
   created_date: string;
   updated_at: string;
 }
 
 class AppointmentClient {
-  private baseUrl: string;
+  private readonly client: AxiosInstance;
+  private readonly baseUrl: string;
   private eventSource: EventSource | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private listeners: Map<string, Set<(appointment: Appointment) => void>> = new Map();
+  private listeners: Map<'created' | 'updated' | 'deleted', Set<(appointment: AppointmentRecord) => void>> = new Map();
 
   constructor(baseUrl: string = API_BASE_URL) {
     this.baseUrl = baseUrl;
+    this.client = axios.create({
+      baseURL: this.baseUrl,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
   }
 
-  /**
-   * Create a new appointment
-   */
-  async createAppointment(data: AppointmentData): Promise<Appointment> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/appointments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+  async createAppointment(data: AppointmentData): Promise<AppointmentRecord> {
+    const normalizedPayload = this.buildPayload(data);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create appointment');
-      }
-
-      const result = await response.json();
-      return result.data;
-    } catch (error) {
-      console.error('Error creating appointment:', error);
-      throw error;
-    }
+    const response = await this.client.post('/api/appointments', normalizedPayload);
+    return response.data.data as AppointmentRecord;
   }
 
-  /**
-   * Get all appointments
-   */
-  async getAppointments(sort: string = '-created_date'): Promise<Appointment[]> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/appointments?sort=${encodeURIComponent(sort)}`);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch appointments');
-      }
-
-      const result = await response.json();
-      return result.data || [];
-    } catch (error) {
-      console.error('Error fetching appointments:', error);
-      return [];
-    }
+  async getAppointments(sort: string = '-created_date'): Promise<AppointmentRecord[]> {
+    const response = await this.client.get('/api/appointments', { params: { sort } });
+    return (response.data?.data ?? []) as AppointmentRecord[];
   }
 
-  /**
-   * Update an appointment
-   */
-  async updateAppointment(id: string, updates: Partial<AppointmentData>): Promise<Appointment> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/appointments/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updates),
-      });
+  async updateAppointment(id: string, updates: Partial<AppointmentData>): Promise<AppointmentRecord> {
+    const payload = this.buildPayload({
+      patientName: updates.patientName ?? '',
+      email: updates.email ?? '',
+      phone: updates.phone ?? '',
+      symptoms: updates.symptoms ?? '',
+      doctorName: updates.doctorName ?? '',
+      date: updates.date ?? '',
+      time: updates.time ?? '',
+      status: updates.status,
+      priority: updates.priority,
+      requestedDoctorId: updates.requestedDoctorId,
+    }, true);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update appointment');
-      }
-
-      const result = await response.json();
-      return result.data;
-    } catch (error) {
-      console.error('Error updating appointment:', error);
-      throw error;
-    }
+    const response = await this.client.patch(`/api/appointments/${id}`, payload);
+    return response.data.data as AppointmentRecord;
   }
 
-  /**
-   * Delete an appointment
-   */
   async deleteAppointment(id: string): Promise<boolean> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/appointments/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete appointment');
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error deleting appointment:', error);
-      return false;
-    }
+    await this.client.delete(`/api/appointments/${id}`);
+    return true;
   }
 
-  /**
-   * Connect to real-time appointment updates via Server-Sent Events
-   */
-  connectToUpdates(onUpdate?: (appointment: Appointment) => void): void {
+  connectToUpdates(onUpdate?: (appointment: AppointmentRecord) => void): void {
     if (typeof EventSource === 'undefined') {
       console.warn('EventSource not supported in this browser');
       return;
     }
 
-    if (this.eventSource) {
-      this.eventSource.close();
-      this.eventSource = null;
-    }
-
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
+    this.disconnect();
 
     try {
       const source = new EventSource(`${this.baseUrl}/api/appointments/stream`);
       this.eventSource = source;
 
       source.addEventListener('init', (event) => {
-        const appointments = JSON.parse(event.data);
-        console.log('Initial appointments loaded:', appointments.length);
+        const appointments = JSON.parse(event.data) as AppointmentRecord[];
+        if (appointments.length) {
+          appointments.forEach((apt) => this.notifyListeners('updated', apt));
+        }
       });
 
       source.addEventListener('created', (event) => {
-        const appointment = JSON.parse(event.data);
-        console.log('New appointment created:', appointment);
-        if (onUpdate) {
-          onUpdate(appointment);
-        }
+        const appointment = JSON.parse(event.data) as AppointmentRecord;
+        onUpdate?.(appointment);
         this.notifyListeners('created', appointment);
       });
 
       source.addEventListener('updated', (event) => {
-        const appointment = JSON.parse(event.data);
-        console.log('Appointment updated:', appointment);
-        if (onUpdate) {
-          onUpdate(appointment);
-        }
+        const appointment = JSON.parse(event.data) as AppointmentRecord;
+        onUpdate?.(appointment);
         this.notifyListeners('updated', appointment);
       });
 
       source.addEventListener('deleted', (event) => {
-        const { id } = JSON.parse(event.data);
-        console.log('Appointment deleted:', id);
-        this.notifyListeners('deleted', { id } as any);
+        const appointment = JSON.parse(event.data) as AppointmentRecord;
+        this.notifyListeners('deleted', appointment);
       });
 
       source.onerror = () => {
-        console.warn('Appointment stream disconnected, reconnecting...');
+        console.warn('Appointment stream disconnected, attempting to reconnect...');
         source.close();
         this.eventSource = null;
 
@@ -192,9 +140,6 @@ class AppointmentClient {
     }
   }
 
-  /**
-   * Disconnect from real-time updates
-   */
   disconnect(): void {
     if (this.eventSource) {
       this.eventSource.close();
@@ -207,51 +152,92 @@ class AppointmentClient {
     }
   }
 
-  /**
-   * Add event listener for appointment changes
-   */
-  addEventListener(event: 'created' | 'updated' | 'deleted', callback: (appointment: Appointment) => void): void {
+  addEventListener(event: 'created' | 'updated' | 'deleted', callback: (appointment: AppointmentRecord) => void): void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
     this.listeners.get(event)!.add(callback);
   }
 
-  /**
-   * Remove event listener
-   */
-  removeEventListener(event: 'created' | 'updated' | 'deleted', callback: (appointment: Appointment) => void): void {
-    const eventListeners = this.listeners.get(event);
-    if (eventListeners) {
-      eventListeners.delete(callback);
-    }
+  removeEventListener(event: 'created' | 'updated' | 'deleted', callback: (appointment: AppointmentRecord) => void): void {
+    const collection = this.listeners.get(event);
+    collection?.delete(callback);
   }
 
-  /**
-   * Notify all listeners of an event
-   */
-  private notifyListeners(event: 'created' | 'updated' | 'deleted', appointment: Appointment): void {
-    const eventListeners = this.listeners.get(event);
-    if (eventListeners) {
-      eventListeners.forEach((callback) => {
-        try {
-          callback(appointment);
-        } catch (error) {
-          console.error('Error in event listener:', error);
+  private notifyListeners(event: 'created' | 'updated' | 'deleted', appointment: AppointmentRecord): void {
+    const collection = this.listeners.get(event);
+    collection?.forEach((callback) => {
+      try {
+        callback(appointment);
+      } catch (error) {
+        console.error('Error in appointment listener:', error);
+      }
+    });
+  }
+
+  private buildPayload(data: AppointmentData, isPartial = false) {
+    const trimmed = (value?: string) => value?.trim() || undefined;
+
+    const isoTimestamp = data.date && data.time
+      ? this.toIsoDateTime(data.date, data.time)
+      : undefined;
+
+    const payload: Record<string, unknown> = {
+      patientName: trimmed(data.patientName),
+      email: trimmed(data.email),
+      phone: trimmed(data.phone),
+      symptoms: trimmed(data.symptoms),
+      doctorName: trimmed(data.doctorName),
+      date: trimmed(data.date),
+      time: trimmed(data.time),
+      status: data.status ?? 'pending',
+      priority: data.priority ?? 'medium',
+      requestedDoctorId: trimmed(data.requestedDoctorId),
+      // Backwards compatibility payload (backend normalizer handles both shapes)
+      patient_name: trimmed(data.patientName),
+      patient_email: trimmed(data.email),
+      patient_phone: trimmed(data.phone),
+      symptoms_text: trimmed(data.symptoms),
+      requested_doctor_name: trimmed(data.doctorName),
+      requested_doctor_id: trimmed(data.requestedDoctorId),
+      appointment_date: trimmed(data.date),
+      appointment_time_slot: trimmed(data.time),
+      appointment_time: isoTimestamp,
+      status_text: data.status ?? 'pending',
+      priority_level: data.priority ?? 'medium',
+    };
+
+    if (isPartial) {
+      Object.keys(payload).forEach((key) => {
+        if (payload[key] === undefined) {
+          delete payload[key];
         }
       });
+    }
+
+    return payload;
+  }
+
+  private toIsoDateTime(date: string, time: string): string | undefined {
+    try {
+      const parsed = new Date(`${date} ${time}`);
+      if (Number.isNaN(parsed.getTime())) {
+        return undefined;
+      }
+      return parsed.toISOString();
+    } catch (error) {
+      console.error('Failed to parse appointment datetime', { date, time, error });
+      return undefined;
     }
   }
 }
 
-// Export singleton instance
 export const appointmentClient = new AppointmentClient();
 
-// Export helper to check backend connection
 export async function checkBackendConnection(): Promise<boolean> {
   try {
-    const response = await fetch(`${API_BASE_URL}/health`);
-    return response.ok;
+    const response = await axios.get(`${API_BASE_URL}/health`);
+    return response.status === 200;
   } catch (error) {
     console.error('Backend connection check failed:', error);
     return false;

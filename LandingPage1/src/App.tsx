@@ -1,10 +1,11 @@
 import { BrowserRouter } from 'react-router-dom'
 import { AppRoutes } from './router'
 
+const basePath = import.meta.env.BASE_URL ?? '/'
 
 function App() {
   return (
-    <BrowserRouter basename={__BASE_PATH__}>
+    <BrowserRouter basename={basePath}>
       <AppRoutes />
     </BrowserRouter>
   )

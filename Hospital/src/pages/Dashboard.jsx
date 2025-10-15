@@ -1,12 +1,13 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { fetchAppointments, updateAppointmentStatus } from "@/api/appointments";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, Plus, LayoutGrid, List, Sparkles, MessageSquare, Clock, ArrowRight, Bot, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { 
@@ -18,20 +19,48 @@ import {
 } from "@/components/ui/select";
 import { formatDateTime } from "@/utils";
 
-import AppointmentCard from "../components/appointments/AppointmentCard";
 import StatsOverview from "../components/appointments/StatsOverview";
 import AppointmentFormDialog from "../components/appointments/AppointmentFormDialog";
 import EmptyState from "../components/ui/EmptyState";
-import NewAppointmentRequestCard from "../components/appointments/NewAppointmentRequestCard";
-import NotificationToast from "../components/appointments/NotificationToast";
 import { useAppointmentNotifications, requestNotificationPermission } from "../hooks/useAppointmentNotifications";
+import AppointmentList from "@/components/appointments/AppointmentList";
+
+const dateFormatter = new Intl.DateTimeFormat('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
+const timeFormatter = new Intl.DateTimeFormat('en-IN', { hour: 'numeric', minute: 'numeric' });
+
+const toDateObject = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const deriveDisplayDate = (appointment) => {
+  if (!appointment) return 'Date TBD';
+  if (appointment.appointment_date) {
+    const fromIso = toDateObject(appointment.appointment_date);
+    return fromIso ? dateFormatter.format(fromIso) : appointment.appointment_date;
+  }
+  const parsed = toDateObject(appointment.appointment_time);
+  return parsed ? dateFormatter.format(parsed) : 'Date TBD';
+};
+
+const deriveDisplayTime = (appointment) => {
+  if (!appointment) return 'Time TBD';
+  if (appointment.appointment_time_slot) {
+    return appointment.appointment_time_slot;
+  }
+  const parsed = toDateObject(appointment.appointment_time);
+  return parsed ? timeFormatter.format(parsed) : 'Time TBD';
+};
 
 export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [layout, setLayout] = useState("grid");
-  const [notification, setNotification] = useState({ show: false, message: '', type: 'info' });
+  const [realtimeAlert, setRealtimeAlert] = useState(null);
+  const [highlightId, setHighlightId] = useState(null);
+  const alertTimerRef = useRef(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -40,28 +69,43 @@ export default function Dashboard() {
     requestNotificationPermission();
   }, []);
 
-  const { data: appointments, isLoading, isFetching } = useQuery({
+  useEffect(() => {
+    return () => {
+      if (alertTimerRef.current) {
+        clearTimeout(alertTimerRef.current);
+      }
+    };
+  }, []);
+
+  const { data: appointments = [], isLoading, isFetching } = useQuery({
     queryKey: ['appointments'],
-    queryFn: () => base44.entities.Appointment.list({ sort: "-created_date" }),
+    queryFn: () => fetchAppointments({ sort: '-created_date' }),
     initialData: [],
-    refetchInterval: 10000, // Refetch every 10 seconds as backup
+    refetchInterval: 15000,
   });
 
   // Real-time notifications
   const { isConnected } = useAppointmentNotifications((newAppointment) => {
-    // Show toast notification
-    setNotification({
-      show: true,
-      message: `${newAppointment.patient_name} - ${newAppointment.symptoms}`,
-      type: 'info'
+    setHighlightId(newAppointment.id);
+    setRealtimeAlert({
+      id: newAppointment.id,
+      patient: newAppointment.patient_name,
+      doctor: newAppointment.requested_doctor_name,
+      symptoms: newAppointment.symptoms,
+      date: deriveDisplayDate(newAppointment),
+      time: deriveDisplayTime(newAppointment),
     });
 
-    // Auto-hide after 5 seconds
-    setTimeout(() => {
-      setNotification(prev => ({ ...prev, show: false }));
-    }, 5000);
+    toast.info(`${newAppointment.patient_name} requested ${newAppointment.requested_doctor_name || 'a doctor'}`);
 
-    // Refetch appointments to include the new one
+    if (alertTimerRef.current) {
+      clearTimeout(alertTimerRef.current);
+    }
+    alertTimerRef.current = setTimeout(() => {
+      setRealtimeAlert(null);
+      setHighlightId(null);
+    }, 6500);
+
     queryClient.invalidateQueries(['appointments']);
   });
 
@@ -75,17 +119,28 @@ export default function Dashboard() {
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch = apt.patient_name?.toLowerCase().includes(searchLower) ||
                            apt.requested_doctor?.toLowerCase().includes(searchLower);
-      const matchesStatus = statusFilter === "all" || apt.status === statusFilter;
+      const status = (apt.status || '').toLowerCase();
+      const matchesStatus = statusFilter === "all" ||
+        status === statusFilter ||
+        (statusFilter === 'accepted' && status === 'confirmed');
       return matchesSearch && matchesStatus;
     });
   }, [appointments, searchTerm, statusFilter]);
 
-  const stats = useMemo(() => ({
-    total: appointments?.length || 0,
-    pending: appointments?.filter(a => a.status === "pending").length || 0,
-    confirmed: appointments?.filter(a => a.status === "confirmed").length || 0,
-    documents_requested: appointments?.filter(a => a.status === "documents_requested").length || 0,
-  }), [appointments]);
+  const stats = useMemo(() => {
+    const total = appointments.length;
+    const normalizeStatus = (apt) => (apt.status || '').toLowerCase();
+    const pending = appointments.filter((apt) => normalizeStatus(apt) === 'pending').length;
+    const accepted = appointments.filter((apt) => ['accepted', 'confirmed'].includes(normalizeStatus(apt))).length;
+    const rejected = appointments.filter((apt) => normalizeStatus(apt) === 'rejected').length;
+
+    return {
+      total,
+      pending,
+      confirmed: accepted,
+      rejected,
+    };
+  }, [appointments]);
 
   const nextAppointmentRequest = useMemo(() => {
     if (!appointments?.length) return null;
@@ -160,66 +215,24 @@ export default function Dashboard() {
   // Handle appointment actions
   const handleAcceptAppointment = async (appointmentId) => {
     try {
-      await base44.entities.Appointment.update(appointmentId, { status: 'confirmed' });
+      await updateAppointmentStatus(appointmentId, 'accepted');
       queryClient.invalidateQueries(['appointments']);
-      setNotification({
-        show: true,
-        message: 'Appointment accepted successfully!',
-        type: 'success'
-      });
-      setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 3000);
+      toast.success('Appointment accepted successfully!');
     } catch (error) {
       console.error('Failed to accept appointment:', error);
-      setNotification({
-        show: true,
-        message: 'Failed to accept appointment. Please try again.',
-        type: 'error'
-      });
-      setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 3000);
+      toast.error('Failed to accept appointment. Please try again.');
     }
   };
 
   const handleRejectAppointment = async (appointmentId) => {
     try {
-      await base44.entities.Appointment.update(appointmentId, { status: 'rejected' });
+      await updateAppointmentStatus(appointmentId, 'rejected');
       queryClient.invalidateQueries(['appointments']);
-      setNotification({
-        show: true,
-        message: 'Appointment rejected.',
-        type: 'info'
-      });
-      setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 3000);
+      toast.info('Appointment rejected.');
     } catch (error) {
       console.error('Failed to reject appointment:', error);
-      setNotification({
-        show: true,
-        message: 'Failed to reject appointment. Please try again.',
-        type: 'error'
-      });
-      setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 3000);
+      toast.error('Failed to reject appointment. Please try again.');
     }
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.05,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 100,
-      },
-    },
   };
 
   return (
@@ -294,9 +307,9 @@ export default function Dashboard() {
                       <div className={`h-2 w-2 rounded-full ${
                         statusFilter === 'all' ? 'bg-blue-500' :
                         statusFilter === 'pending' ? 'bg-yellow-500' :
-                        statusFilter === 'confirmed' ? 'bg-green-500' :
-                        statusFilter === 'documents_requested' ? 'bg-purple-500' :
-                        'bg-red-500'
+                        statusFilter === 'accepted' ? 'bg-green-500' :
+                        statusFilter === 'rejected' ? 'bg-rose-500' :
+                        'bg-blue-500'
                       }`} />
                       <SelectValue placeholder="Filter by status" />
                     </div>
@@ -314,16 +327,10 @@ export default function Dashboard() {
                         <span className="font-medium">Pending Review</span>
                       </div>
                     </SelectItem>
-                    <SelectItem value="confirmed" className="cursor-pointer rounded-lg hover:bg-green-50">
+                    <SelectItem value="accepted" className="cursor-pointer rounded-lg hover:bg-green-50">
                       <div className="flex items-center gap-3 py-1">
                         <div className="h-2 w-2 rounded-full bg-green-500" />
-                        <span className="font-medium">Confirmed</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="documents_requested" className="cursor-pointer rounded-lg hover:bg-purple-50">
-                      <div className="flex items-center gap-3 py-1">
-                        <div className="h-2 w-2 rounded-full bg-purple-500" />
-                        <span className="font-medium">Docs Requested</span>
+                        <span className="font-medium">Accepted</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="rejected" className="cursor-pointer rounded-lg hover:bg-red-50">
@@ -365,24 +372,12 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : filteredAppointments.length > 0 ? (
-              <motion.div
-                key={layout}
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className={layout === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" : "space-y-4"}
-              >
-                {filteredAppointments.map(appointment => (
-                  <motion.div 
-                    key={appointment.id} 
-                    variants={itemVariants}
-                    onClick={() => handleAppointmentClick(appointment)}
-                    className="cursor-pointer"
-                  >
-                    <AppointmentCard appointment={appointment} />
-                  </motion.div>
-                ))}
-              </motion.div>
+              <AppointmentList
+                appointments={filteredAppointments}
+                layout={layout}
+                onSelect={handleAppointmentClick}
+                highlightId={highlightId}
+              />
             ) : (
                <EmptyState
                   imageUrl="https://cdn-icons-png.flaticon.com/512/10041/10041470.png"
@@ -480,11 +475,6 @@ export default function Dashboard() {
       <AppointmentFormDialog
         isOpen={showAddDialog}
         onClose={() => setShowAddDialog(false)}
-      />
-
-      <NotificationToast
-        notification={notification}
-        onClose={() => setNotification(prev => ({ ...prev, show: false }))}
       />
     </>
   );

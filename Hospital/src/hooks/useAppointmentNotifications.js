@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 
 // Notification sound (you can replace with actual audio file path)
 const NOTIFICATION_SOUND_URL = '/sounds/notify.mp3';
+const API_BASE_URL = import.meta.env?.VITE_HOSPITAL_API_URL || 'http://localhost:5000';
 
 export function useAppointmentNotifications(onNewAppointment) {
   const [isConnected, setIsConnected] = useState(false);
@@ -40,7 +41,7 @@ export function useAppointmentNotifications(onNewAppointment) {
     const connectToSSE = () => {
       try {
         // Connect to Patient Portal backend for real-time updates
-        const eventSource = new EventSource('http://localhost:5001/api/appointments/stream');
+  const eventSource = new EventSource(`${API_BASE_URL}/api/appointments/stream`);
         eventSourceRef.current = eventSource;
 
         eventSource.addEventListener('init', (event) => {

@@ -28,7 +28,6 @@ export const common = {
   healthcareSolutionsDesc: "AI-പവർഡ് കൺസൾട്ടിംഗ് മുതൽ സർക്കാർ സ്കീം സഹായം വരെ — മെച്ചപ്പെട്ട ആരോഗ്യത്തിന് ആവശ്യമായതെല്ലാം ഇവിടെയുണ്ട്.",
 
   // Feature Cards
-  findHealthcareTitle: "ആരോഗ്യസേവനം കണ്ടെത്തുക",
   findHealthcareDesc: "നിങ്ങളുടെ സമീപത്തുള്ള ആശുപത്രികൾ, ക്ലിനിക്കുകൾ, ഫാർമസികൾ എന്നിവ തിരയുക.",
   bookAppointmentTitle: "അപ്പോയിന്റ്മെന്റ് ബുക്ക് ചെയ്യുക",
   bookAppointmentDesc: "വീഡിയോ അല്ലെങ്കിൽ നേരിട്ടുള്ള കൺസൾട്ടേഷനുകൾ ഷെഡ്യൂൾ ചെയ്യുക.",
@@ -98,8 +97,7 @@ export const common = {
   doctor: "ഡോക്ടർ",
   hospital: "ആശുപത്രി",
   clinic: "ക്ലിനിക്",
-  pharmacy: "ഫാർമസി",
-  emergency: "അടിയന്തിരം",
+  // Healthcare specific terms reuse provider labels below
   healthRecord: "ആരോഗ്യ രേഖ",
   prescription: "കുറിപ്പടി",
   symptoms: "ലക്ഷണങ്ങൾ",

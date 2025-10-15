@@ -45,7 +45,6 @@ export const common = {
   healthInformationTitle: "Health Information",
   healthInformationDesc: "Personalized nutrition and preventive tips.",
   emergencySOSTitle: "Emergency SOS",
-  emergencySOSDesc: "Quick access to nearest hospital in emergencies.",
   
   // AI Assistant Section
   aiAssistantSectionTitle: "AI Health Assistant in Your Language",
@@ -311,7 +310,6 @@ export const common = {
   longitude: "Longitude",
   accuracy: "Accuracy",
   viewOnGoogleMaps: "View on Google Maps",
-  emergencyContacts: "Emergency Contacts",
   medicalProfile: "Medical Profile",
   medicalID: "Medical ID",
   bloodType: "Blood Type",

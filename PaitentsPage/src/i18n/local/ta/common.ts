@@ -35,7 +35,6 @@ export const common = {
   healthcareSolutionsDesc: "AI-இயங்கும் ஆலோசனையிலிருந்து அரசாங்க திட்ட உதவி வரை — சிறந்த ஆரோக்கியத்திற்கு நீங்கள் தேவைப்படும் அனைத்தும் இங்கே உள்ளது.",
   
   // Feature Cards
-  findHealthcareTitle: "சுகாதார சேவைகளைக் கண்டறியவும்",
   findHealthcareDesc: "உங்கள் அருகிலுள்ள மருத்துவமனைகள், கிளினிக்குகள் மற்றும் மருந்தகங்களைத் தேடவும்.",
   bookAppointmentTitle: "நியமனம் பதிவு செய்யவும்",
   bookAppointmentDesc: "வீடியோ அல்லது நேரில் ஆலோசனைகளை திட்டமிடவும்.",
@@ -105,14 +104,13 @@ export const common = {
   doctor: "மருத்துவர்",
   hospital: "மருத்துவமனை",
   clinic: "கிளினிக்",
-  pharmacy: "மருந்தகம்",
-  emergency: "அவசரநிலை",
   healthRecord: "சுகாதார பதிவு",
   prescription: "மருந்து பரிந்துரை",
   symptoms: "அறிகுறிகள்",
   diagnosis: "நோய் கண்டறிதல்",
   treatment: "சிகிச்சை",
 
+  // Find Healthcare Page
   // Find Healthcare Page
   findHealthcareTitle: 'சுகாதார சேவைகளைக் கண்டறியவும்',
   findHealthcareSubtitle: 'உங்கள் அருகில் உள்ள மருத்துவமனைகள், கிளினிக்குகள், மருந்தகங்கள் மற்றும் மருத்துவர்களைத் தேடுங்கள்',

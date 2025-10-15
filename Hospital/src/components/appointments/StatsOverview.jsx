@@ -1,6 +1,6 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
-import { Calendar, CheckCircle, Clock, FileText } from "lucide-react";
+import { Calendar, CheckCircle, Clock, XCircle } from "lucide-react";
 
 export default function StatsOverview({ stats }) {
   const statCards = [
@@ -26,11 +26,11 @@ export default function StatsOverview({ stats }) {
       shadow: "shadow-green-200",
     },
     {
-      title: "Docs Requested",
-      value: stats.documents_requested,
-      icon: FileText,
-      color: "from-indigo-500 to-purple-400",
-      shadow: "shadow-indigo-200",
+      title: "Rejected",
+      value: stats.rejected,
+      icon: XCircle,
+      color: "from-rose-500 to-pink-400",
+      shadow: "shadow-rose-200",
     },
   ];
 

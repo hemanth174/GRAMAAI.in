@@ -45,7 +45,6 @@ export const common = {
   healthInformationTitle: "ఆరోగ్య సమాచారం",
   healthInformationDesc: "వ్యక్తిగతీకరించిన పోషకాహారం మరియు నివారణ చిట్కాలు.",
   emergencySOSTitle: "అత్యవసర SOS",
-  emergencySOSDesc: "అత్యవసర పరిస్థితుల్లో సమీప ఆసుపత్రికి త్వరిత ప్రవేశం.",
   
   // AI Assistant Section
   aiAssistantSectionTitle: "మీ భాషలో AI ఆరోగ్య అసిస్టెంట్",
@@ -311,7 +310,6 @@ export const common = {
   longitude: "రేఖాంశం",
   accuracy: "ఖచ్చితత్వం",
   viewOnGoogleMaps: "గూగుల్ మ్యాప్స్‌లో చూడండి",
-  emergencyContacts: "అత్యవసర సంప్రదింపులు",
   medicalProfile: "వైద్య ప్రొఫైల్",
   medicalID: "వైద్య ID",
   bloodType: "రక్త వర్గం",

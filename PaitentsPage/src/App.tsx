@@ -4,6 +4,7 @@ import { useRoutes, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import routes from './router/config';
 import './i18n';
+import NotificationWrapper from './components/NotificationWrapper';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -22,9 +23,11 @@ function AppRoutes() {
 
 function App() {
   return (
-    <BrowserRouter basename={__BASE_PATH__}>
-      <ScrollToTop />
-      <AppRoutes />
+    <BrowserRouter>
+      <NotificationWrapper>
+        <ScrollToTop />
+        <AppRoutes />
+      </NotificationWrapper>
     </BrowserRouter>
   );
 }

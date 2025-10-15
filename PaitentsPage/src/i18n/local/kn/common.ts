@@ -28,7 +28,6 @@ export const common = {
   healthcareSolutionsDesc: "AI-ಚಾಲಿತ ಸಲಹೆಯಿಂದ ಸರ್ಕಾರಿ ಯೋಜನೆ ಸಹಾಯದವರೆಗೆ — ಉತ್ತಮ ಆರೋಗ್ಯಕ್ಕೆ ಬೇಕಾದದ್ದೆಲ್ಲವೂ ಇಲ್ಲಿದೆ.",
   
   // Feature Cards
-  findHealthcareTitle: "ಆರೋಗ್ಯ ಸೇವೆ ಹುಡುಕಿ",
   findHealthcareDesc: "ನಿಮ್ಮ ಸಮೀಪದ ಆಸ್ಪತ್ರೆಗಳು, ಕ್ಲಿನಿಕ್‌ಗಳು ಮತ್ತು ಔಷಧಾಲಯಗಳನ್ನು ಹುಡುಕಿ.",
   bookAppointmentTitle: "ಅಪಾಯಿಂಟ್‌ಮೆಂಟ್ ಬುಕ್ ಮಾಡಿ",
   bookAppointmentDesc: "ವೀಡಿಯೋ ಅಥವಾ ವೈಯಕ್ತಿಕ ಸಮಾಲೋಚನೆಗಳನ್ನು ನಿಗದಿಪಡಿಸಿ.",
@@ -98,8 +97,7 @@ export const common = {
   doctor: "ವೈದ್ಯ",
   hospital: "ಆಸ್ಪತ್ರೆ",
   clinic: "ಕ್ಲಿನಿಕ್",
-  pharmacy: "ಔಷಧಾಲಯ",
-  emergency: "ತುರ್ತು",
+  // Healthcare specific terms reuse provider labels below
   healthRecord: "ಆರೋಗ್ಯ ದಾಖಲರೆ",
   prescription: "ಪ್ರಿಸ್ಕ್ರಿಪ್ಷನ್",
   symptoms: "ಲಕ್ಷಣಗಳು",

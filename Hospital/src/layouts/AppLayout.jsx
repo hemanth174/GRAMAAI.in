@@ -50,6 +50,11 @@ const communicationItems = [
     url: "/broadcast",
     icon: BellRing,
   },
+  {
+    title: "Notifications",
+    url: "/notifications",
+    icon: Bell,
+  },
 ];
 
 const settingsItems = [

@@ -36,7 +36,6 @@ export const common = {
   // Feature Cards
   findHealthcareTitle: "આરોગ્ય સેવાઓ શોધો",
   findHealthcareDesc: "તમારી નજીકની હોસ્પિટલો, ક્લિનિક્સ અને ફાર્મસીઓ શોધો.",
-  bookAppointmentTitle: "એપોઇન્ટમેન્ટ બુક કરો",
   bookAppointmentDesc: "વિડિયો અથવા વ્યક્તિગત પરામર્શ શેડ્યૂલ કરો.",
   aiHealthAssistantTitle: "AI આરોગ્ય સહાયક",
   aiHealthAssistantDesc: "વૉઇસ અથવા ચેટ દ્વારા આરોગ્ય પ્રશ્નો પૂછો.",
@@ -262,7 +261,6 @@ export const common = {
   
   // Healthcare section - removed duplicates
   findHealthcareDescription: 'તમારી નજીકની વિશ્વસનીય હોસ્પિટલો, ક્લિનિક્સ અને આરોગ્ય સેવા પ્રદાતાઓ શોધો.',
-  searchHospitals: 'હોસ્પિટલો, ક્લિનિક્સ શોધો...',
   selectLocation: 'સ્થાન પસંદ કરો',
   allCategories: 'બધી શ્રેણીઓ',
   hospitals: 'હોસ્પિટલો',

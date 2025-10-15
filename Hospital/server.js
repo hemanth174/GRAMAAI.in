@@ -96,15 +96,40 @@ function broadcastAppointmentEvent(eventName, payload) {
 }
 
 function normalizeAppointmentPayload(body = {}) {
+    const patientName = body.patient_name || body.patientName;
+    const email = body.patient_email || body.email;
+    const phone = body.patient_phone || body.phone;
+    const symptoms = body.symptoms || body.symptoms_text || '';
+    const requestedDoctorId = body.requested_doctor_id || body.requestedDoctorId;
+    const requestedDoctorName = body.requested_doctor_name || body.requested_doctor || body.doctorName || body.preferred_doctor;
+
+    const appointmentDate = body.appointment_date || body.date || null;
+    const appointmentTimeSlot = body.appointment_time_slot || body.time || null;
+    const priority = body.priority || body.priority_level || 'medium';
+    const status = body.status || body.status_text || 'pending';
+
+    const appointmentTime = (() => {
+        if (body.appointment_time) {
+            return body.appointment_time;
+        }
+        if (appointmentDate && appointmentTimeSlot) {
+            return `${appointmentDate} ${appointmentTimeSlot}`;
+        }
+        return appointmentDate || null;
+    })();
+
     return {
-        patient_name: body.patient_name,
-        patient_email: body.patient_email,
-        symptoms: body.symptoms,
-        requested_doctor_id: body.requested_doctor_id,
-        requested_doctor_name: body.requested_doctor_name || body.requested_doctor || body.preferred_doctor,
-        appointment_time: body.appointment_time,
-        priority: body.priority,
-        status: body.status,
+        patient_name: patientName,
+        patient_email: email,
+        patient_phone: phone,
+        symptoms,
+        requested_doctor_id: requestedDoctorId,
+        requested_doctor_name: requestedDoctorName,
+        appointment_date: appointmentDate,
+        appointment_time: appointmentTime,
+        appointment_time_slot: appointmentTimeSlot,
+        priority,
+        status,
         document_urls: body.document_urls || body.documents || body.uploaded_documents,
         uploaded_documents: body.uploaded_documents || body.document_urls || body.documents,
     };
@@ -112,9 +137,13 @@ function normalizeAppointmentPayload(body = {}) {
 
 function validateAppointmentInput(body, res) {
     const missingFields = [];
-    if (!body.patient_name) missingFields.push('patient_name');
+    if (!body.patient_name) missingFields.push('patientName');
+    if (!body.patient_email) missingFields.push('email');
+    if (!body.patient_phone) missingFields.push('phone');
     if (!body.symptoms) missingFields.push('symptoms');
-    if (!body.appointment_time) missingFields.push('appointment_time');
+    if (!body.requested_doctor_name) missingFields.push('doctorName');
+    if (!body.appointment_date) missingFields.push('date');
+    if (!body.appointment_time_slot && !body.appointment_time) missingFields.push('time');
 
     if (missingFields.length > 0) {
         res.status(400).json({
@@ -447,6 +476,27 @@ app.get('/api/appointments', async (req, res) => {
     } catch (error) {
         console.error('❌ Failed to fetch appointments:', error);
         res.status(500).json({ success: false, message: 'Failed to load appointments' });
+    }
+});
+
+// Get single appointment by ID
+app.get('/api/appointments/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const appointments = await listAppointments({});
+        const appointment = appointments.find(apt => apt.id === id);
+        
+        if (!appointment) {
+            return res.status(404).json({ 
+                success: false, 
+                message: `Appointment with id ${id} not found` 
+            });
+        }
+        
+        res.status(200).json({ success: true, data: appointment });
+    } catch (error) {
+        console.error('❌ Failed to fetch appointment:', error);
+        res.status(500).json({ success: false, message: 'Failed to load appointment' });
     }
 });
 

@@ -1,5 +1,4 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import { Calendar, User, Clock, MoreHorizontal, CheckCircle, AlertCircle, Loader } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,24 +17,37 @@ const priorityConfig = {
   emergency: "bg-red-700 animate-pulse",
 };
 
-export default function AppointmentCard({ appointment }) {
+export default function AppointmentCard({ appointment, onClick }) {
   const { id, patient_name, appointment_time, requested_doctor, status, priority } = appointment;
   const statusInfo = statusConfig[status] || statusConfig.pending;
   const priorityColor = priorityConfig[priority] || priorityConfig.medium;
 
-  const formattedDate = new Date(appointment_time).toLocaleDateString("en-US", {
-    weekday: "short",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-  const formattedTime = new Date(appointment_time).toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  // Safely format date and time with fallbacks
+  let formattedDate = "Date not set";
+  let formattedTime = "Time not set";
+
+  if (appointment_time) {
+    try {
+      const appointmentDate = new Date(appointment_time);
+      if (!isNaN(appointmentDate.getTime())) {
+        formattedDate = appointmentDate.toLocaleDateString("en-US", {
+          weekday: "short",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+        formattedTime = appointmentDate.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+    } catch (error) {
+      console.error('Error formatting appointment date:', appointment_time, error);
+    }
+  }
 
   return (
-    <Link to={`/appointments/${id}`} className="block group">
+    <div onClick={onClick} className="block group cursor-pointer">
       <Card className="bg-white/60 backdrop-blur-sm border-gray-200/80 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1 overflow-hidden">
         <CardHeader className="p-4 border-b border-gray-200/60">
           <div className="flex justify-between items-center">
@@ -64,6 +76,6 @@ export default function AppointmentCard({ appointment }) {
           </div>
         </CardContent>
       </Card>
-    </Link>
+    </div>
   );
 }

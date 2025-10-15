@@ -11,7 +11,7 @@ import {
 } from './database.js';
 
 const app = express();
-const PORT = 5001; // Different port from Hospital backend (5000)
+const PORT = process.env.PORT ? Number(process.env.PORT) : 5001; // Different port from Hospital backend (5000)
 
 // --- Middleware ---
 app.use(cors());
@@ -192,9 +192,19 @@ app.post('/api/appointments', async (req, res) => {
     }
 
     try {
+        // Ensure appointment_time is in ISO format
+        let appointmentTime = payload.appointment_time;
+        if (appointmentTime) {
+            const date = new Date(appointmentTime);
+            if (!isNaN(date.getTime())) {
+                appointmentTime = date.toISOString();
+            }
+        }
+
         const appointment = await createAppointmentRecord({
             id: req.body.id || `apt-${randomUUID()}`,
             ...payload,
+            appointment_time: appointmentTime,
             created_date: req.body.created_date
         });
 

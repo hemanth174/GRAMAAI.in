@@ -1,12 +1,8 @@
-
-import { useNavigate } from 'react-router-dom';
 import { Header } from '../../components/feature/Header';
 import { Footer } from '../../components/feature/Footer';
 import { Button } from '../../components/base/Button';
 
 export default function HomePage() {
-  const navigate = useNavigate();
-
   const problems = [
     {
       icon: 'ri-map-pin-line',
@@ -141,7 +137,9 @@ export default function HomePage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button
-              onClick={() => navigate('/login/patient')}
+              onClick={() => {
+                window.location.href = 'http://localhost:5173';
+              }}
               className="w-full sm:w-auto px-8 py-4 text-lg bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap cursor-pointer"
               size="lg"
             >
@@ -149,7 +147,9 @@ export default function HomePage() {
               Patient Login
             </Button>
             <Button
-              onClick={() => navigate('/login/doctor')}
+              onClick={() => {
+                window.location.href = 'http://localhost:3000/login';
+              }}
               className="w-full sm:w-auto px-8 py-4 text-lg bg-green-600 hover:bg-green-700 text-white whitespace-nowrap cursor-pointer"
               size="lg"
             >
@@ -280,20 +280,24 @@ export default function HomePage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button
-              onClick={() => navigate('/login/patient')}
+              onClick={() => {
+                window.location.href = 'http://localhost:5173';
+              }}
               className="w-full sm:w-auto px-8 py-4 text-lg bg-white text-blue-600 hover:bg-gray-100 whitespace-nowrap cursor-pointer"
               size="lg"
             >
               <i className="ri-user-line mr-3 text-xl"></i>
-              Start as Patient
+              Login to Platform
             </Button>
             <Button
-              onClick={() => navigate('/login/doctor')}
+              onClick={() => {
+                window.location.href = 'http://localhost:3000/login';
+              }}
               className="w-full sm:w-auto px-8 py-4 text-lg bg-white text-green-600 hover:bg-gray-100 whitespace-nowrap cursor-pointer"
               size="lg"
             >
-              <i className="ri-stethoscope-line mr-3 text-xl"></i>
-              Join as Doctor
+              <i className="ri-user-add-line mr-3 text-xl"></i>
+              Register Now
             </Button>
           </div>
         </div>

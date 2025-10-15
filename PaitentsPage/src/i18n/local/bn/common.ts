@@ -36,7 +36,6 @@ export const common = {
   // Feature Cards
   findHealthcareTitle: "স্বাস্থ্যসেবা খুঁজুন",
   findHealthcareDesc: "আপনার কাছাকাছি হাসপাতাল, ক্লিনিক এবং ফার্মেসি খুঁজুন।",
-  bookAppointmentTitle: "অ্যাপয়েন্টমেন্ট বুক করুন",
   bookAppointmentDesc: "ভিডিও বা ব্যক্তিগত পরামর্শ নির্ধারণ করুন।",
   aiHealthAssistantTitle: "AI স্বাস্থ্য সহায়ক",
   aiHealthAssistantDesc: "ভয়েস বা চ্যাটের মাধ্যমে স্বাস্থ্য প্রশ্ন জিজ্ঞাসা করুন।",
@@ -262,7 +261,6 @@ export const common = {
   
   // Healthcare section - removed duplicates
   findHealthcareDescription: 'আপনার কাছাকাছি বিশ্বস্ত হাসপাতাল, ক্লিনিক এবং স্বাস্থ্যসেবা প্রদানকারী খুঁজে পান।',
-  searchHospitals: 'হাসপাতাল, ক্লিনিক খুঁজুন...',
   selectLocation: 'অবস্থান নির্বাচন করুন',
   allCategories: 'সব বিভাগ',
   hospitals: 'হাসপাতাল',

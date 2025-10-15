@@ -45,7 +45,7 @@ export const common = {
   healthInformationTitle: "स्वास्थ्य जानकारी",
   healthInformationDesc: "व्यक्तिगत पोषण और निवारक सुझाव।",
   emergencySOSTitle: "आपातकालीन SOS",
-  emergencySOSDesc: "आपातकाल में निकटतम अस्पताल तक त्वरित पहुँच।",
+    emergencySOSDesc: "तत्काल एम्बुलेंस भेजने और चिकित्सा सहायता के लिए 108 सेवाओं से जुड़ी वन-टच आपातकालीन सुविधा。",
   
   // AI Assistant Section
   aiAssistantSectionTitle: "आपकी भाषा में AI स्वास्थ्य असिस्टेंट",
@@ -311,7 +311,6 @@ export const common = {
   longitude: "देशांतर",
   accuracy: "सटीकता",
   viewOnGoogleMaps: "गूगल मैप्स पर देखें",
-  emergencyContacts: "आपातकालीन संपर्क",
   medicalProfile: "चिकित्सा प्रोफ़ाइल",
   medicalID: "चिकित्सा ID",
   bloodType: "रक्त समूह",
@@ -351,7 +350,6 @@ export const common = {
   multiLanguageAI: "बहुभाषी AI सहायक",
   multiLanguageDesc: "हमारा AI आपकी स्थानीय भाषा में संवाद करता है, स्वास्थ्य सेवा पहुंच में भाषा बाधाओं को तोड़ता है।",
   emergencySOSIntegration: "आपातकालीन SOS एकीकरण",
-  emergencySOSDesc: "तत्काल एम्बुलेंस भेजने और चिकित्सा सहायता के लिए 108 सेवाओं से जुड़ी वन-टच आपातकालीन सुविधा।",
   smartAppointmentBooking: "स्मार्ट अपॉइंटमेंट बुकिंग",
   smartBookingDesc: "रियल-टाइम उपलब्धता अपडेट के साथ सत्यापित डॉक्टरों के साथ ऑनलाइन या व्यक्तिगत परामर्श बुक करें।",
   ourImpactAcrossIndia: "भारत भर में हमारा प्रभाव",

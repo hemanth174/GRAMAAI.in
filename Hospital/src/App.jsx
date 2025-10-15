@@ -11,6 +11,7 @@ import Insights from './pages/Insights'
 import Broadcast from './components/Broadcast'
 import Profile from './pages/Profile'
 import Patients from './pages/Patients'
+import NotificationCenter from './pages/NotificationCenter'
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -56,6 +57,7 @@ function App() {
           <Route path="document-review" element={<DocumentReview />} />
           <Route path="insights" element={<Insights />} />
           <Route path="broadcast" element={<Broadcast />} />
+          <Route path="notifications" element={<NotificationCenter />} />
           <Route path="profile" element={<Profile />} />
           <Route path="patients" element={<Patients />} />
         </Route>

@@ -38,14 +38,22 @@ export default function AppointmentDetail() {
   const [staffNotes, setStaffNotes] = useState('');
   const [showEditDialog, setShowEditDialog] = useState(false);
 
-  const { data: appointment, isLoading, isError } = useQuery({
+  console.log("AppointmentDetail: Rendering with ID:", id);
+
+  const { data: appointment, isLoading, isError, isSuccess } = useQuery({
     queryKey: ['appointment', id],
     queryFn: () => base44.entities.Appointment.get(id),
     enabled: !!id,
     onSuccess: (data) => {
+      console.log("AppointmentDetail: onSuccess, data:", data);
       setStaffNotes(data.staff_notes || '');
+    },
+    onError: (error) => {
+      console.error("AppointmentDetail: onError, error:", error);
     }
   });
+
+  console.log("AppointmentDetail: Query state:", { isLoading, isError, isSuccess, appointment });
 
   const { data: doctors } = useQuery({
     queryKey: ['doctors'],
@@ -142,14 +150,22 @@ export default function AppointmentDetail() {
                     <Calendar className="w-5 h-5 mt-1 text-blue-500" />
                     <div>
                       <p className="font-medium text-gray-500">Date</p>
-                      <p className="text-gray-800 font-semibold">{format(new Date(appointment.appointment_time), 'EEEE, MMMM d, yyyy')}</p>
+                      <p className="text-gray-800 font-semibold">
+                        {appointment.appointment_time && !isNaN(new Date(appointment.appointment_time).getTime()) 
+                          ? format(new Date(appointment.appointment_time), 'EEEE, MMMM d, yyyy')
+                          : 'Date not set'}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <Clock className="w-5 h-5 mt-1 text-blue-500" />
                     <div>
                       <p className="font-medium text-gray-500">Time</p>
-                      <p className="text-gray-800 font-semibold">{format(new Date(appointment.appointment_time), 'h:mm a')}</p>
+                      <p className="text-gray-800 font-semibold">
+                        {appointment.appointment_time && !isNaN(new Date(appointment.appointment_time).getTime())
+                          ? format(new Date(appointment.appointment_time), 'h:mm a')
+                          : 'Time not set'}
+                      </p>
                     </div>
                   </div>
                   <div className="sm:col-span-2 flex items-start gap-3">

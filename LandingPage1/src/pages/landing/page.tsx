@@ -1,4 +1,3 @@
-
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/base/Button';
 
@@ -19,7 +18,9 @@ export default function LandingPage() {
 
         <div className="space-y-4">
           <Button
-            onClick={() => navigate('/login/patient')}
+            onClick={() => {
+              navigate('http://localhost:3005/');
+            }}
             className="w-full py-4 text-lg bg-blue-600 hover:bg-blue-700 text-white"
             size="lg"
           >
@@ -28,7 +29,9 @@ export default function LandingPage() {
           </Button>
 
           <Button
-            onClick={() => navigate('/login/doctor')}
+            onClick={() => {
+              window.location.href = 'http://localhost:3000/login';
+            }}
             className="w-full py-4 text-lg bg-green-600 hover:bg-green-700 text-white"
             size="lg"
           >

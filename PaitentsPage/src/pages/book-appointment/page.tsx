@@ -41,12 +41,13 @@ export default function BookAppointment() {
     specialty: '',
     doctor: '',
     date: '',
-    time: '',
-    patientName: '',
-    age: '',
-    gender: '',
-    contact: '',
-    symptoms: ''
+  time: '',
+  patientName: '',
+  age: '',
+  gender: '',
+  email: '',
+  contact: '',
+  symptoms: ''
   });
 
   const consultationTypes = [
@@ -630,7 +631,7 @@ export default function BookAppointment() {
 
   // Handle final appointment submission
   const handleSubmitAppointment = async () => {
-    if (!formData.patientName || !formData.age || !formData.gender || !formData.contact || !formData.symptoms) {
+    if (!formData.patientName || !formData.age || !formData.gender || !formData.email || !formData.contact || !formData.symptoms || !formData.date || !formData.time) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -639,22 +640,22 @@ export default function BookAppointment() {
     toast.info('Submitting your appointment request...', { duration: 2000 });
 
     try {
-      // Combine date and time into ISO format
-      const dateTime = `${formData.date}T${formData.time.replace(' ', '')}:00`;
-
       // Get doctor info
       const doctor = availableDoctors.find(doc => doc.id.toString() === formData.doctor);
       const doctorName = doctor ? getDoctorName(doctor) : 'Any Available Doctor';
 
       // Create appointment
       const appointment = await appointmentClient.createAppointment({
-        patient_name: formData.patientName,
-        patient_email: formData.contact + '@patient.local', // Use contact as email placeholder
+        patientName: formData.patientName,
+        email: formData.email,
+        phone: formData.contact,
         symptoms: formData.symptoms,
-        requested_doctor_name: doctorName,
-        appointment_time: dateTime,
+        doctorName,
+        date: formData.date,
+        time: formData.time,
+        status: 'pending',
         priority: formData.consultationType === 'emergency' ? 'high' : 'medium',
-        status: 'pending'
+        requestedDoctorId: doctor ? doctor.id.toString() : undefined
       });
 
       console.log('✅ Appointment created:', appointment);
@@ -674,6 +675,7 @@ export default function BookAppointment() {
         patientName: '',
         age: '',
         gender: '',
+        email: '',
         contact: '',
         symptoms: ''
       });
@@ -1118,6 +1120,17 @@ export default function BookAppointment() {
                       </select>
                     </div>
                     <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">{t('emailAddress') || 'Email Address'}</label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1fa27e] focus:border-transparent"
+                        placeholder={currentLanguageCode === 'hi' ? 'अपना ईमेल दर्ज करें' : currentLanguageCode === 'te' ? 'మీ ఇమెయిల్ నమోదు చేయండి' : 'Enter email address'}
+                        required
+                      />
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">{t('contactNumber')}</label>
                       <input
                         type="tel"
@@ -1144,7 +1157,7 @@ export default function BookAppointment() {
                     </Button>
                     <Button 
                       onClick={handleSubmitAppointment}
-                      disabled={!formData.patientName || !formData.age || !formData.gender || !formData.contact || isSubmitting}
+                      disabled={!formData.patientName || !formData.age || !formData.gender || !formData.email || !formData.contact || !formData.date || !formData.time || isSubmitting}
                       className="flex-1"
                     >
                       {isSubmitting ? (currentLanguageCode === 'hi' ? 'सबमिट हो रहा है...' : currentLanguageCode === 'te' ? 'సబ్మిట్ అవుతోంది...' : 'Submitting...') : t('bookAppointment')}

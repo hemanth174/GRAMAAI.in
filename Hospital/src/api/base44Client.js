@@ -14,6 +14,7 @@ class Base44Client {
     this.entities = {
       Appointment: {
         list: async (options = '') => this.#listAppointments(options),
+        get: async (id) => this.#getAppointment(id),
         create: async (data) => this.#createAppointment(data),
         update: async (id, data) => this.#updateAppointment(id, data),
         delete: async (id) => this.#deleteAppointment(id),
@@ -115,6 +116,30 @@ class Base44Client {
         return [...this.appointmentsCache].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
       }
       return [...this.appointmentsCache];
+    }
+  }
+
+  async #getAppointment(id) {
+    try {
+      // First try to get from cache
+      const cached = this.appointmentsCache.find(apt => apt.id === id);
+      if (cached) {
+        return cached;
+      }
+
+      // If not in cache, try to fetch from API
+      const response = await this.#request(`/api/appointments/${id}`);
+      const appointment = this.#normalizeAppointment(response?.data || response);
+      this.#mergeAppointment(appointment);
+      return appointment;
+    } catch (error) {
+      console.error('Failed to get appointment from API, checking cache:', error);
+      // Fallback to cache
+      const cached = this.appointmentsCache.find(apt => apt.id === id);
+      if (cached) {
+        return cached;
+      }
+      throw new Error(`Appointment with id ${id} not found`);
     }
   }
 
