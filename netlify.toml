@@ -1,8 +1,10 @@
-[build]
-  # For Hospital Portal
-  command = "cd Hospital && npm run build"
-  publish = "Hospital/dist"
+# Netlify Configuration for GRAMAAI Project
+# This builds the Landing Page by default
 
+[build]
+  command = "cd LandingPage1 && npm install && npm run build"
+  publish = "LandingPage1/out"
+  
 [build.environment]
   NODE_VERSION = "18"
 
@@ -12,14 +14,20 @@
   to = "/index.html"
   status = 200
 
-# API redirects to backend (when you deploy backend)
+# API redirects to backend (when deployed)
 [[redirects]]
   from = "/api/*"
   to = "https://your-backend-url.onrender.com/api/:splat"
   status = 200
+  force = true
 
 # Headers for better performance  
 [[headers]]
   for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
